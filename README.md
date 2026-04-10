@@ -181,6 +181,11 @@ cd frontend
 npm run dev
 ```
 
+Marketplace page can be accessed at:
+```bash
+http://localhost:3000/marketplace
+```
+
 2. Compile and deploy contracts:
 ```bash
 cd contracts

@@ -312,7 +312,7 @@ function ListModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-5">
           <h2 className="text-base font-semibold text-gray-900">List NFT for Sale</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
         </div>
@@ -501,7 +501,7 @@ export default function MarketplacePage() {
       <div className="flex min-h-[calc(100vh-112px)]">
 
         {/* ── Sidebar ────────────────────────────────────────────── */}
-        <aside className="w-56 shrink-0 border-r border-gray-100 p-4 overflow-y-auto">
+        <aside className="hidden lg:block w-56 shrink-0 border-r border-gray-100 p-4 overflow-y-auto">
 
           {/* My listings toggle */}
           {address && (
@@ -552,10 +552,10 @@ export default function MarketplacePage() {
         </aside>
 
         {/* ── Main content ───────────────────────────────────────── */}
-        <main className="flex-1 p-6 min-w-0">
+        <main className="flex-1 p-4 md:p-6">
 
           {/* Collection banner */}
-          <div className="bg-gradient-to-r from-violet-50 to-sky-50 border border-violet-100 rounded-2xl px-8 py-6 mb-6 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-violet-50 to-sky-50 border border-violet-100 rounded-2xl px-8 py-6 mb-6 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold text-gray-900 mb-1">Nexus NFT Collection</h1>
               <p className="text-xs font-mono text-gray-500">0xzvan.nft · Nexus Testnet · Chain 3945</p>
@@ -583,7 +583,7 @@ export default function MarketplacePage() {
           </div>
 
           {/* Toolbar */}
-          <div className="flex items-center justify-between mb-5 gap-3">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-5 gap-3">
             <div className="flex items-center gap-3">
               <span className="text-xs font-mono text-gray-400">{displayed.length} results</span>
               <select

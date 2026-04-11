@@ -30,6 +30,7 @@ export default function MarketplaceClient() {
 
   useEffect(() => { setMounted(true); }, []);
 
+  // Fungsi untuk mengambil daftar NFT yang sedang dijual
   const fetchListings = useCallback(async () => {
     if (!publicClient) return;
     try {
@@ -53,6 +54,7 @@ export default function MarketplaceClient() {
 
   useEffect(() => { if (mounted) fetchListings(); }, [mounted, fetchListings]);
 
+  // Fungsi MINT
   const handleMint = () => {
     writeContract({
       address: NFT_ADDRESS,
@@ -62,6 +64,28 @@ export default function MarketplaceClient() {
     });
   };
 
+  // Fungsi LIST/SELL (Approve lalu List)
+  const handleList = async (tokenId: bigint, price: bigint) => {
+    // Step 1: Approve Marketplace
+    writeContract({
+      address: NFT_ADDRESS,
+      abi: ERC721_ABI,
+      functionName: "approve",
+      args: [MARKETPLACE_ADDRESS, tokenId],
+    });
+
+    // Step 2: List (Beri jeda sedikit agar approve masuk ke blok)
+    setTimeout(() => {
+      writeContract({
+        address: MARKETPLACE_ADDRESS,
+        abi: MARKETPLACE_ABI,
+        functionName: "listNFT",
+        args: [NFT_ADDRESS, tokenId, price],
+      });
+    }, 5000);
+  };
+
+  // Fungsi BUY
   const handleBuy = (tokenId: bigint, price: bigint) => {
     writeContract({
       address: MARKETPLACE_ADDRESS,
@@ -76,6 +100,7 @@ export default function MarketplaceClient() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white p-6 font-sans">
+      {/* Header & Nav */}
       <nav className="flex justify-between items-center mb-10">
         <h1 className="text-xl font-mono font-bold tracking-tighter">
           0xzvan<span className="text-zinc-600">.nft</span>
@@ -89,6 +114,16 @@ export default function MarketplaceClient() {
               >
                 Mint NFT
               </button>
+              <button 
+                onClick={() => {
+                  const id = prompt("Masukkan Token ID yang mau dijual:");
+                  const prc = prompt("Masukkan Harga (NEX):");
+                  if (id && prc) handleList(BigInt(id), parseEther(prc));
+                }}
+                className="text-[10px] font-mono border border-sky-500/30 bg-sky-500/5 text-sky-400 px-4 py-2 rounded-xl hover:bg-sky-500/10 transition-colors"
+              >
+                Sell NFT
+              </button>
               <button onClick={() => disconnect()} className="text-[10px] font-mono border border-zinc-800 px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800">
                 {address?.slice(0,6)}...{address?.slice(-4)}
               </button>
@@ -101,6 +136,7 @@ export default function MarketplaceClient() {
         </div>
       </nav>
 
+      {/* NFT Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {listings.length > 0 ? (
           listings.map((item, i) => (
@@ -127,6 +163,9 @@ export default function MarketplaceClient() {
           ))
         ) : (
           <div className="col-span-full py-32 text-center border border-dashed border-zinc-900 rounded-[3rem]">
+             <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-900 mb-4">
+              <span className="animate-pulse text-xl">🌐</span>
+            </div>
             <p className="text-zinc-600 font-mono text-[10px] uppercase tracking-[0.3em]">Waiting for listings on Nexus</p>
           </div>
         )}

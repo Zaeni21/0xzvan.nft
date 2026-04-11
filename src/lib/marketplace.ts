@@ -1,5 +1,4 @@
 export const MARKETPLACE_ADDRESS = '0x5645cC460DFa9CE4Dea89DC9df331C0C1721FDFf' as const;
-
 export const NFT_ADDRESS = '0x1EF92429dBB23E3fc563d203be756E07c12AB7Df' as const;
 
 export const MARKETPLACE_ABI = [
@@ -89,6 +88,15 @@ export const MARKETPLACE_ABI = [
 ] as const;
 
 export const ERC721_ABI = [
+  {
+    inputs: [
+      { internalType: 'address', name: 'to', type: 'address' },
+    ],
+    name: 'mint',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
   {
     inputs: [
       { internalType: 'address', name: 'to', type: 'address' },

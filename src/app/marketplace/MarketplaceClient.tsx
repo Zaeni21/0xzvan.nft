@@ -613,7 +613,7 @@ export default function MarketplacePage() {
           {/* Content */}
           {loading ? (
             <div className={view === "grid"
-              ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4"
+              ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"
               : "flex flex-col gap-3"}>
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="border border-gray-100 rounded-2xl overflow-hidden animate-pulse">
@@ -641,7 +641,7 @@ export default function MarketplacePage() {
               )}
             </div>
           ) : view === "grid" ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {displayed.map(listing => {
                 const key = `${listing.nftAddress}-${listing.tokenId}`;
                 const isOwner = !!(address && getAddress(listing.seller) === getAddress(address));

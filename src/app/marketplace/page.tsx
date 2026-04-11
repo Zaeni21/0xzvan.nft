@@ -15,7 +15,6 @@ import {
   useConnect,
   useDisconnect,
 } from "wagmi";
-import { injected } from "wagmi/connectors";
 import { parseEther, formatEther, getAddress } from "viem";
 import {
   MARKETPLACE_ADDRESS,

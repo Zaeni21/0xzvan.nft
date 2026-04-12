@@ -3,14 +3,26 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { WagmiProvider, createConfig, http } from "wagmi";
-import { mainnet } from "wagmi/chains"; // Ganti ke Nexus jika sudah ada di list
 import { injected } from "wagmi/connectors";
 
+// Definisikan Network Nexus secara manual
+const nexusTestnet = {
+  id: 3945,
+  name: 'Nexus Testnet',
+  nativeCurrency: { name: 'Nexus', symbol: 'NEX', decimals: 18 },
+  rpcUrls: {
+    default: { http: ['https://testnet.rpc.nexus.xyz'] },
+  },
+  blockExplorers: {
+    default: { name: 'NexusScan', url: 'https://testnet.explorer.nexus.xyz' },
+  },
+} as const;
+
 const config = createConfig({
-  chains: [mainnet],
+  chains: [nexusTestnet],
   connectors: [injected()],
   transports: {
-    [mainnet.id]: http(),
+    [nexusTestnet.id]: http(),
   },
 });
 

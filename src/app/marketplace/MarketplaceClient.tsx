@@ -358,7 +358,7 @@ function ListModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () 
         <button
           onClick={() => {
             if (step === 0) {
-              writeContract({ address: nftAddr as `0x${string}`, abi: ERC721_ABI, functionName: "approve", args: [MARKETPLACE_ADDRESS, BigInt(tokenId || 0)] });
+              writeContract({ address: nftAddr as `0x${string}`, abi: ERC721_ABI, functionName: "setApprovalForAll", args: [MARKETPLACE_ADDRESS, true] });
             } else {
               writeContract({ address: MARKETPLACE_ADDRESS, abi: MARKETPLACE_ABI, functionName: "listNFT", args: [nftAddr as `0x${string}`, BigInt(tokenId), parseEther(price)] });
             }

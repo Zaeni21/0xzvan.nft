@@ -17,7 +17,7 @@ export default function LandingPage() {
       {/* ─── NAVBAR ─── */}
       <nav className="flex items-center justify-between px-6 h-16 border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur-md z-50">
         <div className="flex items-center gap-8">
-          <Link href="/" className="font-mono text-sm font-bold tracking-tighter">
+          <Link href="/create" className="font-mono text-sm font-bold tracking-tighter">
             0XZVAN<span className="text-[#2081e2]">.NFT</span>
           </Link>
           <div className="hidden md:flex gap-6 text-xs font-mono text-gray-500 uppercase tracking-widest">

@@ -1,21 +1,17 @@
 {
-  "name": "counter-dapp",
+  "name": "0xzvan-nft",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start -H 127.0.0.1",
-    "lint": "next lint",
-    "sync-types": "rm -rf types/contracts && cp -r ../contracts/typechain-types types/contracts"
+    "dev": "next dev",
+    "build": "next build --no-turbo",
+    "start": "next start",
+    "lint": "next lint"
   },
   "dependencies": {
     "@noble/curves": "^1.8.1",
     "@noble/hashes": "^1.7.1",
     "@tanstack/react-query": "^5.0.0",
-    "ethers": "^6.11.1",
-    "firebase": "^10.14.1",
-    "firebase-admin": "^12.0.0",
     "next": "^16.2.3",
     "pinata": "^2.5.5",
     "react": "^19.0.0",
@@ -24,12 +20,11 @@
     "wagmi": "^2.0.0"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.1.7",
+    "eslint-config-next": "^16.2.3",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"

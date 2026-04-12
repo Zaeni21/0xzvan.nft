@@ -107,7 +107,7 @@ function NFTCard({
   isBuying: boolean;
   isOwner: boolean;
 }) {
-  const price = parseFloat(formatEther(listing.price)).toFixed(3);
+  const price = parseFloat(parseFloat(formatEther(listing.price)).toFixed(3)).toString();
 
   return (
     <div
@@ -181,7 +181,7 @@ function NFTModal({
   isOwner: boolean;
   isBuying: boolean;
 }) {
-  const price = parseFloat(formatEther(listing.price)).toFixed(3);
+  const price = parseFloat(parseFloat(formatEther(listing.price)).toFixed(3)).toString();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
@@ -504,7 +504,7 @@ export default function MarketplaceClient() {
     : sorted;
 
   const floorPrice = listings.length
-    ? Math.min(...listings.map((l) => parseFloat(formatEther(l.price)))).toFixed(3)
+    ? parseFloat(Math.min(...listings.map((l) => parseFloat(formatEther(l.price)))).toFixed(3)).toString()
     : "—";
 
   const myListingsCount = address

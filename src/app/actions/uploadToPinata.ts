@@ -1,46 +1,53 @@
+// src/app/actions/uploadToPinata.ts
 "use server";
 
 import { PinataSDK } from "pinata";
 
 const pinata = new PinataSDK({
   pinataJwt: process.env.PINATA_JWT!,
-  pinataGateway: process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud",
+  pinataGateway: process.env.PINATA_GATEWAY!,
 });
 
-export async function uploadToPinata(
-  file: File,
-  name: string,
-  description: string = ""
-) {
+export async function uploadToPinata(file: File, name: string, description: string = "") {
   try {
-    // Pakai upload.file() langsung, lebih aman di berbagai versi SDK
-    const imageUpload = await pinata.upload.file(file);
+    // Upload Gambar
+    const imageUpload = await pinata.upload.public.file(file, {
+      metadata: { name: `${Date.now()}.png` },
+    });
+
     const imageCid = imageUpload.cid;
 
+    // Buat Metadata
     const metadata = {
       name: name.trim(),
-      description: description.trim() || "Extraordinary NFT on Nexus Network",
+      description: description.trim() || "Extraordinary NFT on Nexus Network by 0xzvan.nft",
       image: `ipfs://${imageCid}`,
       attributes: [
         { trait_type: "Collection", value: "Nexus" },
         { trait_type: "Creator", value: "0xzvan" },
+        { trait_type: "Minted On", value: new Date().toISOString().split("T")[0] },
       ],
     };
 
-    const metadataUpload = await pinata.upload.json(metadata);
-    const metadataCid = metadataUpload.cid;
+    // Upload Metadata JSON
+    const metadataUpload = await pinata.upload.public.json(metadata, {
+      metadata: { name: `${Date.now()}.json` },
+    });
 
-    const gateway = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
+    const metadataCid = metadataUpload.cid;
 
     return {
       success: true,
       imageCid,
       metadataCid,
       metadataUri: `ipfs://${metadataCid}`,
-      imageUrl: `https://${gateway}/ipfs/${imageCid}`,
+      imageUrl: `https://${process.env.PINATA_GATEWAY}/ipfs/${imageCid}`,
     };
   } catch (error: any) {
-    console.error("Pinata Error:", error);
-    return { success: false, error: error.message };
+    console.error("Pinata Upload Error:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to upload to Pinata",
+    };
   }
 }

@@ -8,7 +8,7 @@
 
 ## Features
 
-- 🎨 **Mint NFT** — upload image, fill metadata, store permanently on IPFS via Pinata
+- 🎨 **Mint NFT** — upload an image, fill in metadata, and store it permanently on IPFS via Pinata
 - 🛒 **Marketplace** — list, buy, and cancel NFT listings on-chain
 - 🔗 **Nexus Testnet** — Chain ID 3945, native currency NEX
 - 👛 **Wallet** — connect via MetaMask / injected wallet (wagmi v2)
@@ -47,9 +47,9 @@ cd 0xzvan.nft
 pnpm install
 ```
 
-### 2. Setup Environment Variables
+### 2. Environment Variables
 
-Buat file `.env.local` di root project:
+Create a `.env.local` file in the root directory:
 
 ```env
 PINATA_JWT=your_pinata_jwt_token
@@ -57,7 +57,7 @@ PINATA_GATEWAY=your_gateway.mypinata.cloud
 NEXT_PUBLIC_PINATA_GATEWAY=your_gateway.mypinata.cloud
 ```
 
-> Dapatkan Pinata JWT & Gateway di [app.pinata.cloud](https://app.pinata.cloud)
+> Get your Pinata JWT & Gateway at [app.pinata.cloud](https://app.pinata.cloud)
 
 ### 3. Run Development Server
 
@@ -65,44 +65,42 @@ NEXT_PUBLIC_PINATA_GATEWAY=your_gateway.mypinata.cloud
 pnpm dev
 ```
 
-Buka [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
 ## Pages
 
-| Route | Deskripsi |
+| Route | Description |
 |---|---|
 | `/` | Landing page |
-| `/create` | Mint NFT baru |
-| `/marketplace` | Lihat & beli listing NFT |
-| `/collection/[address]` | Detail koleksi per contract |
+| `/create` | Mint a new NFT |
+| `/marketplace` | Browse & buy listed NFTs |
+| `/collection/[address]` | View collection by contract address |
 
 ---
 
 ## How It Works
 
 ### Minting
-1. Upload gambar → Pinata IPFS
-2. Generate metadata JSON → Pinata IPFS
-3. Call `mint(tokenURI)` di contract ERC-721
-4. Token tersimpan on-chain dengan `ipfs://` URI
+1. Upload image → stored on Pinata IPFS
+2. Generate metadata JSON → stored on Pinata IPFS
+3. Call `mint(tokenURI)` on the ERC-721 contract
+4. Token is stored on-chain with an `ipfs://` URI
 
 ### Marketplace
 1. Approve contract → `setApprovalForAll(marketplace, true)`
 2. List NFT → `listNFT(nftAddress, tokenId, price)`
-3. Buy NFT → `buyNFT(nftAddress, tokenId)` + kirim NEX
-4. Cancel → `cancelListing(nftAddress, tokenId)`
+3. Buy NFT → `buyNFT(nftAddress, tokenId)` + send NEX
+4. Cancel listing → `cancelListing(nftAddress, tokenId)`
 
 ---
 
 ## Deploy to Vercel
 
-```bash
-vercel deploy
-```
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Zaeni21/0xzvan.nft)
 
-Set env vars di Vercel Dashboard → Settings → Environment Variables:
+Set the following environment variables in your Vercel Dashboard → Settings → Environment Variables:
 
 ```
 PINATA_JWT

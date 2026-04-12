@@ -1,12 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Paksa abaikan error ESLint pas build biar kelar
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Abaikan juga error type check kalau ada
   typescript: {
     ignoreBuildErrors: true,
+  },
+  // Fix: wagmi/viem import 'ws' (Node.js) di client bundle → alias ke false
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        ws: false,
+        net: false,
+        tls: false,
+        fs: false,
+      };
+    }
+    return config;
   },
 };
 

@@ -362,8 +362,8 @@ export default function MarketplaceClient() {
 
   const { writeContract: writeBuy, data: buyHash, isPending: isBuyPending, reset: resetBuy } = useWriteContract();
   const { isLoading: isBuyConfirming, isSuccess: isBuySuccess } = useWaitForTransactionReceipt({ hash: buyHash });
-  const { writeContract: writeCancel } = useWriteContract();
-  const { isSuccess: isCancelSuccess } = useWaitForTransactionReceipt({ hash: writeCancel.data });
+  const { writeContract: writeCancel, data: cancelHash } = useWriteContract();
+  const { isSuccess: isCancelSuccess } = useWaitForTransactionReceipt({ hash: cancelHash });
 
   // Fetch Listings dari Pinata
   const fetchListings = useCallback(async () => {

@@ -22,8 +22,8 @@ export default function LandingPage() {
           </Link>
           <div className="hidden md:flex gap-6 text-xs font-mono text-gray-500 uppercase tracking-widest">
             <Link href="/marketplace" className="hover:text-[#2081e2] transition-colors">Marketplace</Link>
-            <a href="#" className="hover:text-[#2081e2] transition-colors">Stats</a>
-            <a href="#" className="hover:text-[#2081e2] transition-colors">Resources</a>
+            <a href="/create" className="hover:text-[#2081e2] transition-colors">Stats</a>
+            <a href="/create" className="hover:text-[#2081e2] transition-colors">Resources</a>
           </div>
         </div>
 
@@ -131,8 +131,8 @@ export default function LandingPage() {
           </p>
           <div className="flex gap-8 text-[10px] font-mono text-gray-400 uppercase tracking-widest">
             <a href="https://testnet.explorer.nexus.xyz" target="_blank" className="hover:text-[#2081e2]">Explorer</a>
-            <a href="#" className="hover:text-[#2081e2]">Privacy</a>
-            <a href="#" className="hover:text-[#2081e2]">Terms</a>
+            <a href="/create" className="hover:text-[#2081e2]">Privacy</a>
+            <a href="/create" className="hover:text-[#2081e2]">Terms</a>
           </div>
         </div>
       </footer>

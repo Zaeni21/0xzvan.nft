@@ -23,19 +23,18 @@ interface Listing {
   seller: string;
   nftAddress: string;
   tokenId: bigint;
-  price: bigint;
+  price: bigint; image?: string; name?: string;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-const ARTS = ["🌌","⚡","🔷","🌀","✨","🔮","🌊","🔥","💎","🛸"];
 const COLORS = [
   "bg-violet-50","bg-sky-50","bg-orange-50","bg-emerald-50",
   "bg-pink-50","bg-yellow-50","bg-cyan-50","bg-red-50","bg-indigo-50","bg-teal-50",
 ];
-const art = (id: bigint) => ARTS[Number(id) % ARTS.length];
 const color = (id: bigint) => COLORS[Number(id) % COLORS.length];
+const fetchMetadata = async (uri: string) => { try { const res = await fetch(uri.replace("ipfs://", "https://ipfs.io/ipfs/")); return await res.json() as any; } catch { return null; } };
 
 // ─── Wallet Button ────────────────────────────────────────────────────────────
 
@@ -115,7 +114,7 @@ function NFTCard({
     >
       {/* Art */}
       <div className={`relative aspect-square ${color(listing.tokenId)} flex items-center justify-center text-5xl`}>
-        {art(listing.tokenId)}
+        <img src={listing.image || "https://via.placeholder.com/400"} alt="NFT" className="w-full h-full object-cover" />
         <button
           className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 border border-gray-100 flex items-center justify-center text-sm hover:scale-110 transition-transform"
           onClick={e => { e.stopPropagation(); setLiked(!liked); }}
@@ -184,7 +183,7 @@ function NFTRow({
       onClick={() => onClick(listing)}
     >
       <div className={`w-12 h-12 rounded-xl ${color(listing.tokenId)} flex items-center justify-center text-2xl flex-shrink-0`}>
-        {art(listing.tokenId)}
+        <img src={listing.image || "https://via.placeholder.com/400"} alt="NFT" className="w-full h-full object-cover" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900">Nexus #{listing.tokenId.toString()}</p>
@@ -235,7 +234,7 @@ function NFTModal({ listing, onClose, onBuy, isOwner, isBuying }: {
       >
         {/* Image */}
         <div className={`aspect-square ${color(listing.tokenId)} flex items-center justify-center text-8xl`}>
-          {art(listing.tokenId)}
+          <img src={listing.image || "https://via.placeholder.com/400"} alt="NFT" className="w-full h-full object-cover" />
         </div>
 
         {/* Body */}
@@ -419,7 +418,8 @@ export default function MarketplacePage() {
       for (const log of [...listedLogs].reverse()) {
         const { seller, nftAddress, tokenId, price } = log.args as { seller: string; nftAddress: string; tokenId: bigint; price: bigint };
         const key = `${nftAddress.toLowerCase()}-${tokenId}`;
-        if (!inactive.has(key) && !seen.has(key)) { seen.add(key); active.push({ seller, nftAddress, tokenId, price }); }
+        // Logic fetch metadata bisa ditambah di sini
+        if (!inactive.has(key) && !seen.has(key)) { seen.add(key); const meta = await fetchMetadata(`https://firebasestorage.googleapis.com/v0/b/xzvan-nft.firebasestorage.app/o/${tokenId}.json`); active.push({ seller, nftAddress, tokenId, price, image: `https://firebasestorage.googleapis.com/v0/b/xzvan-nft.firebasestorage.app/o/${tokenId}.png?alt=media`, name: meta?.name }); }
       }
       setListings(active);
     } catch (err) { console.error(err); }

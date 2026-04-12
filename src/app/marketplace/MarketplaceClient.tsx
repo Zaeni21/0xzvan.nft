@@ -114,7 +114,7 @@ function NFTCard({
     >
       {/* Art */}
       <div className={`relative aspect-square ${color(listing.tokenId)} flex items-center justify-center text-5xl`}>
-        <img src={listing.image || "https://via.placeholder.com/400"} alt="NFT" className="w-full h-full object-cover" />
+        <img src={listing.image} alt="NFT" className="w-full h-full object-cover" />
         <button
           className="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/90 border border-gray-100 flex items-center justify-center text-sm hover:scale-110 transition-transform"
           onClick={e => { e.stopPropagation(); setLiked(!liked); }}
@@ -183,7 +183,7 @@ function NFTRow({
       onClick={() => onClick(listing)}
     >
       <div className={`w-12 h-12 rounded-xl ${color(listing.tokenId)} flex items-center justify-center text-2xl flex-shrink-0`}>
-        <img src={listing.image || "https://via.placeholder.com/400"} alt="NFT" className="w-full h-full object-cover" />
+        <img src={listing.image} alt="NFT" className="w-full h-full object-cover" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900">Nexus #{listing.tokenId.toString()}</p>
@@ -234,7 +234,7 @@ function NFTModal({ listing, onClose, onBuy, isOwner, isBuying }: {
       >
         {/* Image */}
         <div className={`aspect-square ${color(listing.tokenId)} flex items-center justify-center text-8xl`}>
-          <img src={listing.image || "https://via.placeholder.com/400"} alt="NFT" className="w-full h-full object-cover" />
+          <img src={listing.image} alt="NFT" className="w-full h-full object-cover" />
         </div>
 
         {/* Body */}

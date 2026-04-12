@@ -365,52 +365,69 @@ export default function MarketplaceClient() {
   const { writeContract: writeCancel, data: cancelHash } = useWriteContract();
   const { isSuccess: isCancelSuccess } = useWaitForTransactionReceipt({ hash: cancelHash });
 
-  // Fetch Listings dari Pinata
+  // Fetch Listings dari on-chain events
   const fetchListings = useCallback(async () => {
     if (!publicClient) return;
     setLoading(true);
 
+    const gateway = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
+
+    // Helper: resolve ipfs:// URI ke HTTPS gateway
+    const resolveIpfs = (uri: string) =>
+      uri.startsWith("ipfs://")
+        ? uri.replace("ipfs://", `https://${gateway}/ipfs/`)
+        : uri;
+
     try {
+      const eventBase = { address: MARKETPLACE_ADDRESS as `0x${string}`, fromBlock: 0n, toBlock: "latest" as const };
+
       const [listedLogs, soldLogs, canceledLogs] = await Promise.all([
-        publicClient.getLogs({ address: MARKETPLACE_ADDRESS, event: { type: "event", name: "NFTListed", inputs: [{ name: "seller", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }, { name: "price", type: "uint256" }] }, fromBlock: 0n }),
-        publicClient.getLogs({ address: MARKETPLACE_ADDRESS, event: { type: "event", name: "NFTSold", inputs: [{ name: "buyer", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }, { name: "price", type: "uint256" }] }, fromBlock: 0n }),
-        publicClient.getLogs({ address: MARKETPLACE_ADDRESS, event: { type: "event", name: "ListingCanceled", inputs: [{ name: "seller", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }] }, fromBlock: 0n }),
+        publicClient.getLogs({ ...eventBase, event: { type: "event", name: "NFTListed", inputs: [{ name: "seller", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }, { name: "price", type: "uint256" }] } }),
+        publicClient.getLogs({ ...eventBase, event: { type: "event", name: "NFTSold", inputs: [{ name: "buyer", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }, { name: "price", type: "uint256" }] } }),
+        publicClient.getLogs({ ...eventBase, event: { type: "event", name: "ListingCanceled", inputs: [{ name: "seller", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }] } }),
       ]);
 
       const inactive = new Set<string>();
       [...soldLogs, ...canceledLogs].forEach((log) => {
         const { nftAddress, tokenId } = log.args as any;
-        inactive.add(`${nftAddress.toLowerCase()}-${tokenId}`);
+        inactive.add(`${(nftAddress as string).toLowerCase()}-${tokenId}`);
       });
 
       const seen = new Set<string>();
       const active: Listing[] = [];
-      const gateway = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
 
       for (const log of [...listedLogs].reverse()) {
         const { seller, nftAddress, tokenId, price } = log.args as any;
-        const key = `${nftAddress.toLowerCase()}-${tokenId}`;
+        const key = `${(nftAddress as string).toLowerCase()}-${tokenId}`;
 
-        if (!inactive.has(key) && !seen.has(key)) {
-          seen.add(key);
+        if (inactive.has(key) || seen.has(key)) continue;
+        seen.add(key);
 
-          const metadataUrl = `https://${gateway}/ipfs/${tokenId}.json`;
-          const meta = await fetchMetadata(metadataUrl);
+        // Ambil tokenURI dari contract — ini yang beneran menyimpan IPFS CID
+        let imageUrl = `/api/image/${tokenId}`; // fallback ke generated SVG
+        let name = `Nexus #${tokenId}`;
 
-          let imageUrl = `https://${gateway}/ipfs/${tokenId}.png`;
-          if (meta?.image) {
-            imageUrl = meta.image.replace("ipfs://", `https://${gateway}/ipfs/`);
+        try {
+          const tokenUri = await publicClient.readContract({
+            address: nftAddress as `0x${string}`,
+            abi: ERC721_ABI,
+            functionName: "tokenURI",
+            args: [tokenId],
+          }) as string;
+
+          if (tokenUri) {
+            const metadataUrl = resolveIpfs(tokenUri);
+            const meta = await fetchMetadata(metadataUrl);
+            if (meta) {
+              name = meta.name || name;
+              if (meta.image) imageUrl = resolveIpfs(meta.image);
+            }
           }
-
-          active.push({
-            seller,
-            nftAddress,
-            tokenId,
-            price,
-            image: imageUrl,
-            name: meta?.name || `Nexus #${tokenId}`,
-          });
+        } catch (e) {
+          console.warn(`tokenURI fetch failed for token ${tokenId}:`, e);
         }
+
+        active.push({ seller, nftAddress, tokenId, price, image: imageUrl, name });
       }
 
       setListings(active);

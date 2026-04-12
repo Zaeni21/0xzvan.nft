@@ -353,6 +353,7 @@ export default function MarketplaceClient() {
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [view, setView] = useState<"grid" | "list">("grid");
   const [sort, setSort] = useState<"price_asc" | "price_desc" | "newest">("price_asc");
   const [tab, setTab] = useState<"all" | "mine">("all");
@@ -365,31 +366,51 @@ export default function MarketplaceClient() {
   const { writeContract: writeCancel, data: cancelHash } = useWriteContract();
   const { isSuccess: isCancelSuccess } = useWaitForTransactionReceipt({ hash: cancelHash });
 
+  const resolveIpfs = (uri: string) => {
+    const gateway = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
+    return uri.startsWith("ipfs://")
+      ? uri.replace("ipfs://", `https://${gateway}/ipfs/`)
+      : uri;
+  };
+
+  const getLogsWithFallback = async (client: any, params: any) => {
+    try {
+      return await client.getLogs({ ...params, fromBlock: 0n, toBlock: "latest" });
+    } catch (e: any) {
+      const msg = String(e?.message || "");
+      if (msg.includes("block range") || msg.includes("exceed") || msg.includes("limit") || msg.includes("too many") || e?.code === -32005) {
+        const latest = await client.getBlockNumber();
+        const from = latest > 50000n ? latest - 50000n : 0n;
+        console.warn("[marketplace] RPC block range limit, fallback ke", Number(from), "->", Number(latest));
+        return await client.getLogs({ ...params, fromBlock: from, toBlock: "latest" });
+      }
+      throw e;
+    }
+  };
+
   // Fetch Listings dari on-chain events
   const fetchListings = useCallback(async () => {
     if (!publicClient) return;
     setLoading(true);
+    setFetchError(null);
 
-    const gateway = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
-
-    // Helper: resolve ipfs:// URI ke HTTPS gateway
-    const resolveIpfs = (uri: string) =>
-      uri.startsWith("ipfs://")
-        ? uri.replace("ipfs://", `https://${gateway}/ipfs/`)
-        : uri;
+    const LISTED_EVENT = { type: "event" as const, name: "NFTListed", inputs: [{ name: "seller", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }, { name: "price", type: "uint256", indexed: false }] };
+    const SOLD_EVENT   = { type: "event" as const, name: "NFTSold",   inputs: [{ name: "buyer",  type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }, { name: "price", type: "uint256", indexed: false }] };
+    const CANCEL_EVENT = { type: "event" as const, name: "ListingCanceled", inputs: [{ name: "seller", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }] };
 
     try {
-      const eventBase = { address: MARKETPLACE_ADDRESS as `0x${string}`, fromBlock: 0n, toBlock: "latest" as const };
-
+      const base = { address: MARKETPLACE_ADDRESS as `0x${string}` };
       const [listedLogs, soldLogs, canceledLogs] = await Promise.all([
-        publicClient.getLogs({ ...eventBase, event: { type: "event", name: "NFTListed", inputs: [{ name: "seller", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }, { name: "price", type: "uint256" }] } }),
-        publicClient.getLogs({ ...eventBase, event: { type: "event", name: "NFTSold", inputs: [{ name: "buyer", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }, { name: "price", type: "uint256" }] } }),
-        publicClient.getLogs({ ...eventBase, event: { type: "event", name: "ListingCanceled", inputs: [{ name: "seller", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }] } }),
+        getLogsWithFallback(publicClient, { ...base, event: LISTED_EVENT }),
+        getLogsWithFallback(publicClient, { ...base, event: SOLD_EVENT }),
+        getLogsWithFallback(publicClient, { ...base, event: CANCEL_EVENT }),
       ]);
 
+      console.log(`[marketplace] listed=${listedLogs.length} sold=${soldLogs.length} canceled=${canceledLogs.length}`);
+
       const inactive = new Set<string>();
-      [...soldLogs, ...canceledLogs].forEach((log) => {
-        const { nftAddress, tokenId } = log.args as any;
+      [...soldLogs, ...canceledLogs].forEach((log: any) => {
+        const { nftAddress, tokenId } = log.args;
         inactive.add(`${(nftAddress as string).toLowerCase()}-${tokenId}`);
       });
 
@@ -399,12 +420,10 @@ export default function MarketplaceClient() {
       for (const log of [...listedLogs].reverse()) {
         const { seller, nftAddress, tokenId, price } = log.args as any;
         const key = `${(nftAddress as string).toLowerCase()}-${tokenId}`;
-
         if (inactive.has(key) || seen.has(key)) continue;
         seen.add(key);
 
-        // Ambil tokenURI dari contract — ini yang beneran menyimpan IPFS CID
-        let imageUrl = `/api/image/${tokenId}`; // fallback ke generated SVG
+        let imageUrl = `/api/image/${tokenId}`;
         let name = `Nexus #${tokenId}`;
 
         try {
@@ -415,28 +434,32 @@ export default function MarketplaceClient() {
             args: [tokenId],
           }) as string;
 
+          console.log(`[marketplace] token ${tokenId} URI:`, tokenUri);
+
           if (tokenUri) {
-            const metadataUrl = resolveIpfs(tokenUri);
-            const meta = await fetchMetadata(metadataUrl);
+            const meta = await fetchMetadata(resolveIpfs(tokenUri));
             if (meta) {
               name = meta.name || name;
               if (meta.image) imageUrl = resolveIpfs(meta.image);
             }
           }
         } catch (e) {
-          console.warn(`tokenURI fetch failed for token ${tokenId}:`, e);
+          console.warn(`tokenURI failed for token ${tokenId}:`, e);
         }
 
         active.push({ seller, nftAddress, tokenId, price, image: imageUrl, name });
       }
 
       setListings(active);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to fetch listings:", err);
+      setFetchError(err?.message || "Gagal load listings dari RPC");
     } finally {
       setLoading(false);
     }
   }, [publicClient]);
+
+
 
   useEffect(() => { fetchListings(); }, [fetchListings]);
 
@@ -579,13 +602,31 @@ export default function MarketplaceClient() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-3xl h-[380px] animate-pulse" />
+              <div key={i} className="bg-gray-100 rounded-3xl h-[380px] animate-pulse" />
             ))}
+          </div>
+        ) : fetchError ? (
+          <div className="text-center py-20">
+            <p className="text-5xl mb-4">⚠️</p>
+            <p className="text-red-500 font-mono text-sm mb-2">Gagal load listings dari RPC</p>
+            <p className="text-gray-400 text-xs mb-6 max-w-md mx-auto">{fetchError}</p>
+            <button
+              onClick={fetchListings}
+              className="px-6 py-2 bg-[#2081e2] text-white text-sm rounded-xl hover:bg-[#1a6fc4] transition-colors"
+            >
+              Coba Lagi
+            </button>
           </div>
         ) : displayed.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-6xl mb-4">🏪</p>
-            <p className="text-gray-500">No active listings yet</p>
+            <p className="text-gray-500 mb-4">No active listings yet</p>
+            <button
+              onClick={fetchListings}
+              className="px-6 py-2 border border-gray-200 text-gray-500 text-sm rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              ↻ Refresh
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

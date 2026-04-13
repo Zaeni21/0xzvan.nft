@@ -30,8 +30,11 @@ interface Listing {
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 const resolveIpfs = (uri: string) => {
+  if (!uri) return "";
   const gw = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
-  return uri.startsWith("ipfs://") ? uri.replace("ipfs://", `https://${gw}/ipfs/`) : uri;
+  if (uri.startsWith("ipfs://")) return uri.replace("ipfs://", `https://${gw}/ipfs/`);
+  if (uri.startsWith("data:application/json;base64,")) return uri;
+  return uri;
 };
 
 const fmtPrice = (p: bigint) =>
@@ -39,6 +42,11 @@ const fmtPrice = (p: bigint) =>
 
 const fetchMetadata = async (uri: string) => {
   try {
+    if (uri.startsWith("data:application/json;base64,")) {
+      const base64 = uri.split(",")[1];
+      const json = atob(base64);
+      return JSON.parse(json);
+    }
     const res = await fetch(uri);
     return res.ok ? await res.json() : null;
   } catch { return null; }
@@ -422,7 +430,8 @@ export default function MarketplaceClient() {
         seen.add(key);
 
         // PILIH ABI BERDASARKAN KONTRAK
-        const currentAbi = (nftAddress as string).toLowerCase() === NFT_ADDRESS_BAYC.toLowerCase() ? ABI_BAYC : ABI_OLD;
+        const isBayc = (nftAddress as string).toLowerCase() === NFT_ADDRESS_BAYC.toLowerCase();
+        const currentAbi = isBayc ? ABI_BAYC : ABI_OLD;
 
         let imageUrl = `/api/image/${tokenId}`;
         let nftName = `Nexus #${tokenId}`;
@@ -436,10 +445,18 @@ export default function MarketplaceClient() {
           }) as string;
 
           if (tokenUri) {
-            const meta = await fetchMetadata(resolveIpfs(tokenUri));
-            if (meta) {
-              if (meta.image) imageUrl = resolveIpfs(meta.image);
-              if (meta.name) nftName = meta.name;
+            if (isBayc && tokenUri.startsWith("data:application/json;base64,")) {
+              const meta = await fetchMetadata(tokenUri);
+              if (meta) {
+                if (meta.image) imageUrl = resolveIpfs(meta.image);
+                if (meta.name) nftName = meta.name;
+              }
+            } else {
+              const meta = await fetchMetadata(resolveIpfs(tokenUri));
+              if (meta) {
+                if (meta.image) imageUrl = resolveIpfs(meta.image);
+                if (meta.name) nftName = meta.name;
+              }
             }
           }
         } catch (e) { console.error("Metadata error:", e); }

@@ -7,7 +7,15 @@ import {
   usePublicClient, useConnect, useDisconnect,
 } from "wagmi";
 import { parseEther, formatEther, getAddress } from "viem";
-import { MARKETPLACE_ADDRESS, NFT_ADDRESS, MARKETPLACE_ABI, ERC721_ABI } from "@/lib/marketplace";
+import { 
+  MARKETPLACE_ADDRESS, 
+  ALL_NFT_ADDRESSES, 
+  NFT_ADDRESS_BAYC, 
+  MARKETPLACE_ABI, 
+  ABI_BAYC, 
+  ABI_OLD,
+  ERC721_ABI 
+} from "@/lib/marketplace";
 import { useToast } from "@/app/components/Toast";
 
 interface Listing {
@@ -202,7 +210,7 @@ function NFTModal({ listing, onClose, onBuy, isOwner, isBuying }: {
 // ─── List NFT Modal ─────────────────────────────────────────────────────────────
 function ListModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [step, setStep] = useState<0 | 1>(0);
-  const [nftAddr, setNftAddr] = useState<string>(NFT_ADDRESS);
+  const [selectedContract, setSelectedContract] = useState(NFT_ADDRESS_BAYC);
   const [tokenId, setTokenId] = useState("");
   const [price, setPrice] = useState("");
   const { writeContract, data: hash, isPending, reset } = useWriteContract();
@@ -224,7 +232,7 @@ function ListModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () 
         <div className="flex items-center gap-3 mb-8">
           {["Approve", "List"].map((label, i) => (
             <div key={i} className="flex items-center flex-1">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium border-2 transition-all
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium border-2 transition-all
                 ${step === i ? "bg-[#2081e2] border-[#2081e2] text-white" : step > i ? "bg-green-500 border-green-500 text-white" : "border-gray-300 text-gray-400"}`}>
                 {step > i ? "✓" : i + 1}
               </div>
@@ -235,9 +243,16 @@ function ListModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () 
         </div>
         <div className="space-y-5">
           <div>
-            <label className="text-xs font-mono text-gray-500 block mb-2">NFT Contract</label>
-            <input value={nftAddr} onChange={(e) => setNftAddr(e.target.value)} disabled={step === 1}
-              className="w-full h-11 border border-gray-200 rounded-2xl px-4 text-sm font-mono focus:border-[#2081e2] outline-none" />
+            <label className="text-xs font-mono text-gray-500 block mb-2">NFT Collection</label>
+            <select 
+              className="w-full h-11 border border-gray-200 rounded-2xl px-4 text-sm font-mono focus:border-[#2081e2] outline-none bg-white"
+              value={selectedContract}
+              onChange={(e) => setSelectedContract(e.target.value as `0x${string}`)}
+              disabled={step === 1}
+            >
+              <option value={NFT_ADDRESS_BAYC}>BAYC Collection</option>
+              <option value={ALL_NFT_ADDRESSES[1]}>Old Collection</option>
+            </select>
           </div>
           <div>
             <label className="text-xs font-mono text-gray-500 block mb-2">Token ID</label>
@@ -257,9 +272,9 @@ function ListModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () 
         </div>
         <button onClick={() => {
           if (step === 0) {
-            writeContract({ address: nftAddr as `0x${string}`, abi: ERC721_ABI, functionName: "setApprovalForAll", args: [MARKETPLACE_ADDRESS, true] });
+            writeContract({ address: selectedContract as `0x${string}`, abi: ERC721_ABI, functionName: "setApprovalForAll", args: [MARKETPLACE_ADDRESS, true] });
           } else {
-            writeContract({ address: MARKETPLACE_ADDRESS, abi: MARKETPLACE_ABI, functionName: "listNFT", args: [nftAddr as `0x${string}`, BigInt(tokenId), parseEther(price)] });
+            writeContract({ address: MARKETPLACE_ADDRESS, abi: MARKETPLACE_ABI, functionName: "listNFT", args: [selectedContract as `0x${string}`, BigInt(tokenId), parseEther(price)] });
           }
         }} disabled={!tokenId || (step === 1 && !price) || isPending || isConfirming}
           className="mt-8 w-full h-12 bg-[#2081e2] hover:bg-blue-600 disabled:bg-gray-400 text-white font-medium rounded-2xl transition-colors">
@@ -372,35 +387,19 @@ export default function MarketplaceClient() {
   const { writeContract: writeCancel, data: cancelHash } = useWriteContract();
   const { isSuccess: isCancelSuccess } = useWaitForTransactionReceipt({ hash: cancelHash });
 
-  const getLogsWithFallback = async (client: any, params: any) => {
-    try {
-      return await client.getLogs({ ...params, fromBlock: 0n, toBlock: "latest" });
-    } catch (e: any) {
-      const msg = String(e?.message || "");
-      if (msg.includes("block range") || msg.includes("exceed") || msg.includes("limit") || msg.includes("too many") || e?.code === -32005) {
-        const latest = await client.getBlockNumber();
-        const from = latest > 50000n ? latest - 50000n : 0n;
-        return await client.getLogs({ ...params, fromBlock: from, toBlock: "latest" });
-      }
-      throw e;
-    }
-  };
-
   const fetchListings = useCallback(async () => {
     if (!publicClient) return;
     setLoading(true);
     setFetchError(null);
 
-    const LISTED = { type: "event" as const, name: "NFTListed", inputs: [{ name: "seller", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }, { name: "price", type: "uint256", indexed: false }] };
-    const SOLD = { type: "event" as const, name: "NFTSold", inputs: [{ name: "buyer", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }, { name: "price", type: "uint256", indexed: false }] };
-    const CANCELED = { type: "event" as const, name: "ListingCanceled", inputs: [{ name: "seller", type: "address", indexed: true }, { name: "nftAddress", type: "address", indexed: true }, { name: "tokenId", type: "uint256", indexed: true }] };
-
     try {
-      const base = { address: MARKETPLACE_ADDRESS as `0x${string}` };
+      const currentBlock = await publicClient.getBlockNumber();
+      const fromBlock = currentBlock > 100000n ? currentBlock - 100000n : 0n;
+
       const [listedLogs, soldLogs, canceledLogs] = await Promise.all([
-        getLogsWithFallback(publicClient, { ...base, event: LISTED }),
-        getLogsWithFallback(publicClient, { ...base, event: SOLD }),
-        getLogsWithFallback(publicClient, { ...base, event: CANCELED }),
+        publicClient.getContractEvents({ address: MARKETPLACE_ADDRESS, abi: MARKETPLACE_ABI, eventName: "NFTListed", fromBlock }),
+        publicClient.getContractEvents({ address: MARKETPLACE_ADDRESS, abi: MARKETPLACE_ABI, eventName: "NFTSold", fromBlock }),
+        publicClient.getContractEvents({ address: MARKETPLACE_ADDRESS, abi: MARKETPLACE_ABI, eventName: "ListingCanceled", fromBlock }),
       ]);
 
       const inactive = new Set<string>();
@@ -409,215 +408,146 @@ export default function MarketplaceClient() {
         inactive.add(`${(nftAddress as string).toLowerCase()}-${tokenId}`);
       });
 
-      const seen = new Set<string>();
       const active: Listing[] = [];
+      const seen = new Set<string>();
 
       for (const log of [...listedLogs].reverse()) {
         const { seller, nftAddress, tokenId, price } = log.args as any;
         const key = `${(nftAddress as string).toLowerCase()}-${tokenId}`;
-        if (inactive.has(key) || seen.has(key)) continue;
+
+        // CEK APAKAH ALAMAT NFT ADA DI DAFTAR (BAYC atau OLD)
+        const isAllowed = ALL_NFT_ADDRESSES.some(addr => addr.toLowerCase() === (nftAddress as string).toLowerCase());
+
+        if (!isAllowed || inactive.has(key) || seen.has(key)) continue;
         seen.add(key);
 
+        // PILIH ABI BERDASARKAN KONTRAK
+        const currentAbi = (nftAddress as string).toLowerCase() === NFT_ADDRESS_BAYC.toLowerCase() ? ABI_BAYC : ABI_OLD;
+
         let imageUrl = `/api/image/${tokenId}`;
-        let name = `Nexus #${tokenId}`;
+        let nftName = `Nexus #${tokenId}`;
 
         try {
           const tokenUri = await publicClient.readContract({
-            address: nftAddress as `0x${string}`, abi: ERC721_ABI,
-            functionName: "tokenURI", args: [tokenId],
+            address: nftAddress as `0x${string}`,
+            abi: currentAbi,
+            functionName: "tokenURI",
+            args: [tokenId],
           }) as string;
 
           if (tokenUri) {
             const meta = await fetchMetadata(resolveIpfs(tokenUri));
             if (meta) {
-              name = meta.name || name;
               if (meta.image) imageUrl = resolveIpfs(meta.image);
+              if (meta.name) nftName = meta.name;
             }
           }
-        } catch { /* use fallback */ }
+        } catch (e) { console.error("Metadata error:", e); }
 
-        active.push({ seller, nftAddress, tokenId, price, image: imageUrl, name });
+        active.push({ seller, nftAddress, tokenId, price, image: imageUrl, name: nftName });
       }
-
       setListings(active);
-    } catch (err: any) {
-      setFetchError(err?.message || "Failed to load listings");
+    } catch (err) {
+      toastError("Gagal memuat data marketplace");
     } finally {
       setLoading(false);
     }
-  }, [publicClient]);
+  }, [publicClient, toastError]);
 
   useEffect(() => { fetchListings(); }, [fetchListings]);
-
-  useEffect(() => {
-    if (isBuySuccess) {
-      success("NFT purchased successfully!");
-      fetchListings(); resetBuy(); setActiveBuyKey(null); setSelectedListing(null);
-    }
-  }, [isBuySuccess]);
-
-  useEffect(() => {
-    if (isCancelSuccess) {
-      success("Listing cancelled");
-      fetchListings();
-    }
-  }, [isCancelSuccess]);
+  useEffect(() => { if (isBuySuccess || isCancelSuccess) { fetchListings(); resetBuy(); setActiveBuyKey(null); setSelectedListing(null); } }, [isBuySuccess, isCancelSuccess, fetchListings, resetBuy]);
 
   const handleBuy = (listing: Listing) => {
     setActiveBuyKey(`${listing.nftAddress}-${listing.tokenId}`);
     writeBuy({ address: MARKETPLACE_ADDRESS, abi: MARKETPLACE_ABI, functionName: "buyNFT", args: [listing.nftAddress as `0x${string}`, listing.tokenId], value: listing.price });
   };
-
   const handleCancel = (listing: Listing) => {
     writeCancel({ address: MARKETPLACE_ADDRESS, abi: MARKETPLACE_ABI, functionName: "cancelListing", args: [listing.nftAddress as `0x${string}`, listing.tokenId] });
   };
 
-  // Filter + sort
-  const filtered = listings.filter((l) =>
-    search.trim() === "" || (l.name || "").toLowerCase().includes(search.toLowerCase())
+  const filtered = listings.filter(l =>
+    l.name?.toLowerCase().includes(search.toLowerCase()) ||
+    l.tokenId.toString().includes(search)
   );
+
   const sorted = [...filtered].sort((a, b) => {
     if (sort === "price_asc") return Number(a.price - b.price);
     if (sort === "price_desc") return Number(b.price - a.price);
     return 0;
   });
-  const displayed = tab === "mine" && address
-    ? sorted.filter((l) => getAddress(l.seller) === getAddress(address))
-    : sorted;
 
-  const floorPrice = listings.length
-    ? parseFloat(parseFloat(formatEther(listings.reduce((m, l) => l.price < m ? l.price : m, listings[0].price))).toFixed(3)).toString()
-    : "—";
+  const displayed = tab === "mine" && address
+    ? sorted.filter(l => getAddress(l.seller) === getAddress(address))
+    : sorted;
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-40 bg-white border-b border-gray-100 flex items-center px-4 sm:px-6 h-16 gap-3">
-        <Link href="/" className="font-mono text-sm font-medium shrink-0">
-          0xzvan<span className="text-[#2081e2]">.nft</span>
+      <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center px-6 h-16 gap-4">
+        <Link href="/" className="font-mono text-sm font-bold shrink-0">
+          0XZVAN<span className="text-[#2081e2]">.NFT</span>
         </Link>
-        <div className="flex-1 max-w-sm relative mx-2 sm:mx-4">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">⌕</span>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-9 bg-gray-50 border border-gray-200 rounded-xl pl-8 pr-3 text-sm outline-none focus:border-[#2081e2] focus:bg-white transition-colors placeholder:text-gray-400"
-            placeholder="Search by name…"
-          />
+        <div className="flex-1 max-w-md relative mx-4">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">⌕</span>
+          <input value={search} onChange={(e) => setSearch(e.target.value)}
+            className="w-full h-10 bg-gray-50 border border-gray-200 rounded-2xl pl-10 pr-4 text-sm outline-none focus:border-[#2081e2] focus:bg-white transition-all"
+            placeholder="Search by name or ID..." />
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-3">
           {address && (
             <button onClick={() => setShowListModal(true)}
-              className="h-9 px-3 sm:px-4 bg-[#2081e2] text-white rounded-xl text-xs font-mono font-medium hover:bg-[#1a6fc4] transition-colors whitespace-nowrap">
-              + List NFT
+              className="h-9 px-5 bg-[#2081e2] text-white rounded-xl text-xs font-mono font-bold hover:bg-[#1a6fc4] transition-all">
+              + LIST NFT
             </button>
           )}
           <WalletButton />
         </div>
       </nav>
 
-      {/* Category Tabs */}
-      <div className="flex items-center gap-1 px-4 sm:px-6 border-b border-gray-100 overflow-x-auto scrollbar-none">
-        {["All", "Art", "Collectibles", "Domain Names", "Music", "Photography", "Sports"].map((cat) => (
-          <button key={cat} className="h-11 px-3 sm:px-4 text-xs font-mono whitespace-nowrap border-b-2 border-transparent text-gray-500 hover:text-gray-800 shrink-0">
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      <main className="p-4 sm:p-6">
-        {/* Banner */}
-        <div className="bg-gradient-to-r from-violet-50 to-sky-50 border border-violet-100 rounded-2xl px-6 sm:px-8 py-6 mb-6 sm:mb-8 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-semibold">Nexus NFT Collection</h1>
-            <p className="text-xs font-mono text-gray-500 mt-1">0xzvan.nft • Nexus Testnet</p>
-          </div>
-          <div className="flex gap-6 sm:gap-10 text-center">
-            {[
-              { label: "Items", value: listings.length },
-              { label: "Floor", value: floorPrice === "—" ? "—" : `${floorPrice} NEX` },
-              { label: "Fee", value: "2.5%" },
-            ].map((item) => (
-              <div key={item.label}>
-                <p className="text-xl sm:text-2xl font-bold font-mono">{item.value}</p>
-                <p className="text-[10px] font-mono text-gray-400">{item.label}</p>
-              </div>
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between mb-8">
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-2xl">
+            {(["all", "mine"] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`px-6 py-2 rounded-xl text-xs font-mono font-bold transition-all
+                  ${tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                {t === "all" ? "EXPLORE" : "MY LISTINGS"}
+              </button>
             ))}
           </div>
-        </div>
-
-        {/* Tabs + Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-between mb-5">
-          <div className="flex items-center gap-2">
-            {/* Mine / All tabs */}
-            <div className="flex border border-gray-200 rounded-xl overflow-hidden text-xs font-mono">
-              <button onClick={() => setTab("all")} className={`px-4 h-9 ${tab === "all" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-50"}`}>All</button>
-              <button onClick={() => setTab("mine")} className={`px-4 h-9 border-l border-gray-200 ${tab === "mine" ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-50"}`}>
-                {address ? "My Listings" : "Mine"}
-              </button>
-            </div>
-            <span className="text-xs font-mono text-gray-400">{displayed.length} results</span>
-          </div>
-
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <span className="text-xs font-mono text-gray-400">{displayed.length} items</span>
             <select value={sort} onChange={(e) => setSort(e.target.value as any)}
-              className="h-9 border border-gray-200 rounded-xl px-3 text-xs font-mono bg-white">
-              <option value="price_asc">Price: Low → High</option>
-              <option value="price_desc">Price: High → Low</option>
-              <option value="newest">Newest</option>
+              className="h-10 border border-gray-200 rounded-2xl px-4 text-xs font-mono outline-none bg-white cursor-pointer">
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="newest">Recently Listed</option>
             </select>
-            <div className="flex border border-gray-200 rounded-xl overflow-hidden">
-              {(["grid", "list"] as const).map((v) => (
-                <button key={v} onClick={() => setView(v)}
-                  className={`w-9 h-9 flex items-center justify-center text-lg ${view === v ? "bg-gray-100 text-gray-900" : "text-gray-400 hover:bg-gray-50"}`}>
-                  {v === "grid" ? "▦" : "≡"}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
-        {/* Content */}
         {loading ? (
-          <div className={view === "grid" ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6" : "space-y-3"}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
           </div>
-        ) : fetchError ? (
-          <div className="text-center py-20">
-            <p className="text-5xl mb-4">⚠️</p>
-            <p className="text-red-500 font-mono text-sm mb-2">Failed to load listings</p>
-            <p className="text-gray-400 text-xs mb-6 max-w-md mx-auto">{fetchError}</p>
-            <button onClick={fetchListings} className="px-6 py-2 bg-[#2081e2] text-white text-sm rounded-xl hover:bg-[#1a6fc4] transition-colors">Try Again</button>
-          </div>
         ) : displayed.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-6xl mb-4">{search ? "🔍" : "🏪"}</p>
-            <p className="text-gray-500 mb-4">{search ? `No results for "${search}"` : "No active listings yet"}</p>
-            {search ? (
-              <button onClick={() => setSearch("")} className="px-5 py-2 border border-gray-200 text-gray-500 text-sm rounded-xl hover:bg-gray-50">Clear search</button>
-            ) : (
-              <button onClick={fetchListings} className="px-5 py-2 border border-gray-200 text-gray-500 text-sm rounded-xl hover:bg-gray-50">↻ Refresh</button>
-            )}
+          <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-gray-100 rounded-[3rem]">
+            <span className="text-5xl mb-6">🏪</span>
+            <p className="text-gray-500 font-mono text-sm">No NFTs found in this collection</p>
           </div>
         ) : (
-          <div className={view === "grid" ? "grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6" : "space-y-3"}>
-            {displayed.map((listing) => {
-              const key = `${listing.nftAddress}-${listing.tokenId}`;
-              const isOwner = !!(address && getAddress(listing.seller) === getAddress(address));
-              return (
-                <NFTCard key={key} listing={listing} onBuy={handleBuy} onCancel={handleCancel}
-                  onEdit={setEditListing} onClick={setSelectedListing}
-                  isBuying={activeBuyKey === key && (isBuyPending || isBuyConfirming)} isOwner={isOwner} />
-              );
-            })}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {displayed.map(l => (
+              <NFTCard key={`${l.nftAddress}-${l.tokenId}`} listing={l}
+                onBuy={handleBuy} onCancel={handleCancel} onEdit={setEditListing} onClick={setSelectedListing}
+                isBuying={activeBuyKey === `${l.nftAddress}-${l.tokenId}` && (isBuyPending || isBuyConfirming)}
+                isOwner={!!(address && getAddress(l.seller) === getAddress(address))} />
+            ))}
           </div>
         )}
       </main>
 
-      {/* Modals */}
       {selectedListing && (
-        <NFTModal listing={selectedListing} onClose={() => setSelectedListing(null)}
-          onBuy={(l) => { handleBuy(l); setSelectedListing(null); }}
+        <NFTModal listing={selectedListing} onClose={() => setSelectedListing(null)} onBuy={handleBuy}
           isOwner={!!(address && getAddress(selectedListing.seller) === getAddress(address))}
           isBuying={activeBuyKey === `${selectedListing.nftAddress}-${selectedListing.tokenId}` && (isBuyPending || isBuyConfirming)} />
       )}

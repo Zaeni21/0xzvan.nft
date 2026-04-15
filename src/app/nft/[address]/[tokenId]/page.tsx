@@ -31,6 +31,26 @@ const resolveMetaUri = async (tokenUri: string): Promise<any> => {
   } catch { return null; }
 };
 
+// Render NFT image — handle data:image/svg+xml;base64, inline agar tidak kena CSP block
+function NFTImage({ src, fallback, alt, className }: { src: string; fallback: string; alt: string; className?: string }) {
+  const [errored, setErrored] = useState(false);
+  if (src.startsWith("data:image/svg+xml;base64,")) {
+    try {
+      const svg = atob(src.split(",")[1]);
+      return <div className={className} dangerouslySetInnerHTML={{ __html: svg }}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }} />;
+    } catch {}
+  }
+  if (src.startsWith("data:image/svg+xml,")) {
+    try {
+      const svg = decodeURIComponent(src.split(",")[1]);
+      return <div className={className} dangerouslySetInnerHTML={{ __html: svg }}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }} />;
+    } catch {}
+  }
+  return <img src={errored ? fallback : (src || fallback)} alt={alt} className={className} onError={() => setErrored(true)} />;
+}
+
 // Minimal ABI untuk read-only: tokenURI + ownerOf
 const READ_ABI = [
   { inputs: [{ internalType: "uint256", name: "tokenId", type: "uint256" }], name: "tokenURI", outputs: [{ internalType: "string", name: "", type: "string" }], stateMutability: "view", type: "function" },
@@ -134,8 +154,7 @@ export default function NFTDetailPage({ params: p }: { params: Promise<{ address
             {loadingMeta ? (
               <div className="w-full h-full animate-pulse bg-gray-100" />
             ) : (
-              <img src={image} alt={name} className="w-full h-full object-cover"
-                onError={(e) => { (e.target as HTMLImageElement).src = `/api/image/${tokenId}`; }} />
+              <NFTImage src={image} fallback={`/api/image/${tokenId}`} alt={name} className="w-full h-full object-cover" />
             )}
           </div>
 

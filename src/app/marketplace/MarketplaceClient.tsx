@@ -104,6 +104,47 @@ function WalletButton() {
   );
 }
 
+// ─── NFT Image ─────────────────────────────────────────────────────────────────
+// Handle data:image/svg+xml;base64, via dangerouslySetInnerHTML jika <img> gagal
+function NFTImage({ src, fallback, alt, className }: { src: string; fallback: string; alt: string; className?: string }) {
+  const [errored, setErrored] = useState(false);
+
+  // Kalau data:image/svg+xml — decode dan render inline SVG langsung
+  // ini bypass CSP restriction pada beberapa browser
+  if (src.startsWith("data:image/svg+xml;base64,")) {
+    try {
+      const svgContent = atob(src.split(",")[1]);
+      return (
+        <div className={className}
+          dangerouslySetInnerHTML={{ __html: svgContent }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+        />
+      );
+    } catch { /* fallthrough */ }
+  }
+
+  if (src.startsWith("data:image/svg+xml,")) {
+    try {
+      const svgContent = decodeURIComponent(src.split(",")[1]);
+      return (
+        <div className={className}
+          dangerouslySetInnerHTML={{ __html: svgContent }}
+          style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+        />
+      );
+    } catch { /* fallthrough */ }
+  }
+
+  return (
+    <img
+      src={errored ? fallback : (src || fallback)}
+      alt={alt}
+      className={className}
+      onError={() => setErrored(true)}
+    />
+  );
+}
+
 // ─── NFT Card ──────────────────────────────────────────────────────────────────
 function NFTCard({ listing, onBuy, onCancel, onEdit, onClick, isBuying, isOwner }: {
   listing: Listing; onBuy: (l: Listing) => void; onCancel: (l: Listing) => void;
@@ -116,9 +157,8 @@ function NFTCard({ listing, onBuy, onCancel, onEdit, onClick, isBuying, isOwner 
       onClick={() => onClick(listing)}
     >
       <div className="relative aspect-square bg-gray-100 overflow-hidden">
-        <img src={listing.image} alt={listing.name || `Nexus #${listing.tokenId}`}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          onError={(e) => { (e.target as HTMLImageElement).src = `/api/image/${listing.tokenId}`; }} />
+        <NFTImage src={listing.image || ""} fallback={`/api/image/${listing.tokenId}`} alt={listing.name || `Nexus #${listing.tokenId}`}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
         <button className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm border border-white/70 flex items-center justify-center text-base hover:scale-110 transition-transform"
           onClick={(e) => e.stopPropagation()}>♡</button>
       </div>
@@ -191,9 +231,8 @@ function NFTModal({ listing, onClose, onBuy, isOwner, isBuying }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-3xl overflow-hidden w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="relative aspect-square bg-gray-100">
-          <img src={listing.image} alt={listing.name || ""}
-            className="w-full h-full object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).src = `/api/image/${listing.tokenId}`; }} />
+          <NFTImage src={listing.image || ""} fallback={`/api/image/${listing.tokenId}`} alt={listing.name || ""}
+            className="w-full h-full object-cover" />
         </div>
         <div className="p-6">
           <div className="flex items-center justify-between mb-1">

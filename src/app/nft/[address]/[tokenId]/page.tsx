@@ -10,9 +10,32 @@ import { useToast } from "@/app/components/Toast";
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
 const resolveIpfs = (uri: string) => {
+  if (!uri) return "";
+  if (uri.startsWith("data:")) return uri; // data:image/... or data:application/json;base64,...
   const gw = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
   return uri.startsWith("ipfs://") ? uri.replace("ipfs://", `https://${gw}/ipfs/`) : uri;
 };
+
+// Handle semua format tokenURI: data:application/json;base64,, ipfs://, https://
+const resolveMetaUri = async (tokenUri: string): Promise<any> => {
+  if (!tokenUri) return null;
+  try {
+    if (tokenUri.startsWith("data:application/json;base64,")) {
+      return JSON.parse(atob(tokenUri.split(",")[1]));
+    }
+    if (tokenUri.startsWith("data:application/json,")) {
+      return JSON.parse(decodeURIComponent(tokenUri.split(",")[1]));
+    }
+    const res = await fetch(resolveIpfs(tokenUri), { cache: "force-cache" });
+    return res.ok ? await res.json() : null;
+  } catch { return null; }
+};
+
+// Minimal ABI untuk read-only: tokenURI + ownerOf
+const READ_ABI = [
+  { inputs: [{ internalType: "uint256", name: "tokenId", type: "uint256" }], name: "tokenURI", outputs: [{ internalType: "string", name: "", type: "string" }], stateMutability: "view", type: "function" },
+  { inputs: [{ internalType: "uint256", name: "tokenId", type: "uint256" }], name: "ownerOf", outputs: [{ internalType: "address", name: "", type: "address" }], stateMutability: "view", type: "function" },
+] as const;
 
 export default function NFTDetailPage({ params: p }: { params: Promise<{ address: string; tokenId: string }> }) {
   const { address: contractAddress, tokenId } = use(p);
@@ -41,13 +64,12 @@ export default function NFTDetailPage({ params: p }: { params: Promise<{ address
       setLoadingMeta(true);
       try {
         const [tokenUri, ownerAddr] = await Promise.all([
-          publicClient.readContract({ address: contractAddress as `0x${string}`, abi: ERC721_ABI, functionName: "tokenURI", args: [BigInt(tokenId)] }) as Promise<string>,
-          publicClient.readContract({ address: contractAddress as `0x${string}`, abi: ERC721_ABI, functionName: "ownerOf", args: [BigInt(tokenId)] }) as Promise<string>,
+          publicClient.readContract({ address: contractAddress as `0x${string}`, abi: READ_ABI, functionName: "tokenURI", args: [BigInt(tokenId)] }) as Promise<string>,
+          publicClient.readContract({ address: contractAddress as `0x${string}`, abi: READ_ABI, functionName: "ownerOf", args: [BigInt(tokenId)] }) as Promise<string>,
         ]);
         setOwner(ownerAddr);
         if (tokenUri) {
-          const res = await fetch(resolveIpfs(tokenUri)).catch(() => null);
-          const data = res?.ok ? await res.json().catch(() => null) : null;
+          const data = await resolveMetaUri(tokenUri);
           if (data) {
             setMeta(data);
             if (data.image) setImage(resolveIpfs(data.image));

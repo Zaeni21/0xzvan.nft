@@ -18,6 +18,11 @@ import {
 } from "@/lib/marketplace";
 import { useToast } from "@/app/components/Toast";
 
+interface Attribute {
+  trait_type: string;
+  value: string | number;
+}
+
 interface Listing {
   seller: string;
   nftAddress: string;
@@ -25,29 +30,34 @@ interface Listing {
   price: bigint;
   image?: string;
   name?: string;
+  description?: string;
+  attributes?: Attribute[];
 }
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
+const fmtPrice = (p: bigint) =>
+  parseFloat(parseFloat(formatEther(p)).toFixed(3)).toString();
 
 const resolveIpfs = (uri: string) => {
   if (!uri) return "";
   const gw = process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud";
   if (uri.startsWith("ipfs://")) return uri.replace("ipfs://", `https://${gw}/ipfs/`);
-  if (uri.startsWith("data:application/json;base64,")) return uri;
+  if (uri.startsWith("data:")) return uri; // data:image/... or data:application/json;...
   return uri;
 };
 
-const fmtPrice = (p: bigint) =>
-  parseFloat(parseFloat(formatEther(p)).toFixed(3)).toString();
-
-const fetchMetadata = async (uri: string) => {
+// Decode tokenURI -- handles ipfs://, https://, data:application/json;base64,
+const resolveMetaUri = async (tokenUri: string): Promise<any> => {
+  if (!tokenUri) return null;
   try {
-    if (uri.startsWith("data:application/json;base64,")) {
-      const base64 = uri.split(",")[1];
-      const json = atob(base64);
-      return JSON.parse(json);
+    if (tokenUri.startsWith("data:application/json;base64,")) {
+      return JSON.parse(atob(tokenUri.split(",")[1]));
     }
-    const res = await fetch(uri);
+    if (tokenUri.startsWith("data:application/json,")) {
+      return JSON.parse(decodeURIComponent(tokenUri.split(",")[1]));
+    }
+    const res = await fetch(resolveIpfs(tokenUri), { cache: "force-cache" });
     return res.ok ? await res.json() : null;
   } catch { return null; }
 };
@@ -113,8 +123,15 @@ function NFTCard({ listing, onBuy, onCancel, onEdit, onClick, isBuying, isOwner 
           onClick={(e) => e.stopPropagation()}>♡</button>
       </div>
       <div className="p-4">
-        <div className="flex items-center gap-1 text-[10px] font-mono text-[#2081e2] mb-1">
-          <span>0xzvan.nft</span><span className="text-blue-400">✓</span>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-1 text-[10px] font-mono text-[#2081e2]">
+            <span>0xzvan.nft</span><span className="text-blue-400">✓</span>
+          </div>
+          {listing.attributes && listing.attributes.length > 0 && (
+            <span className="text-[9px] font-mono bg-violet-50 text-violet-500 px-2 py-0.5 rounded-full border border-violet-100">
+              {listing.attributes.length} traits
+            </span>
+          )}
         </div>
         <p className="text-sm font-medium text-gray-900 mb-2 truncate">{listing.name || `Nexus #${listing.tokenId}`}</p>
         <div className="flex items-end justify-between gap-2">
@@ -172,14 +189,42 @@ function NFTModal({ listing, onClose, onBuy, isOwner, isBuying }: {
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white rounded-3xl overflow-hidden w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-3xl overflow-hidden w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="relative aspect-square bg-gray-100">
-          <img src={listing.image} alt={listing.name || ""} className="w-full h-full object-cover" />
+          <img src={listing.image} alt={listing.name || ""}
+            className="w-full h-full object-cover"
+            onError={(e) => { (e.target as HTMLImageElement).src = `/api/image/${listing.tokenId}`; }} />
         </div>
         <div className="p-6">
-          <div className="flex items-center gap-2 text-[#2081e2] text-sm font-mono mb-1">0xzvan.nft <span>✓</span></div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">{listing.name || `Nexus #${listing.tokenId}`}</h2>
-          <div className="space-y-3 text-sm mb-6">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2 text-[#2081e2] text-sm font-mono">0xzvan.nft <span>✓</span></div>
+            {listing.attributes && listing.attributes.length > 0 && (
+              <span className="text-[10px] font-mono bg-violet-50 text-violet-500 px-2.5 py-1 rounded-full border border-violet-100">
+                {listing.attributes.length} traits
+              </span>
+            )}
+          </div>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-1">{listing.name || `Nexus #${listing.tokenId}`}</h2>
+          {listing.description && (
+            <p className="text-sm text-gray-500 mb-4 leading-relaxed">{listing.description}</p>
+          )}
+
+          {/* Attributes */}
+          {listing.attributes && listing.attributes.length > 0 && (
+            <div className="mb-5">
+              <p className="text-[10px] font-mono text-gray-400 uppercase tracking-widest mb-3">Attributes</p>
+              <div className="grid grid-cols-3 gap-2">
+                {listing.attributes.map((attr, i) => (
+                  <div key={i} className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 text-center">
+                    <p className="text-[9px] font-mono text-blue-400 uppercase tracking-wider truncate">{attr.trait_type}</p>
+                    <p className="text-xs font-semibold text-blue-900 mt-0.5 truncate">{String(attr.value)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-3 text-sm mb-5">
             {[
               { label: "Owner", value: short(listing.seller) },
               { label: "Token ID", value: `#${listing.tokenId}` },
@@ -193,7 +238,7 @@ function NFTModal({ listing, onClose, onBuy, isOwner, isBuying }: {
             ))}
           </div>
           <p className="text-xs font-mono text-gray-400 mb-1">Current Price</p>
-          <p className="text-3xl font-bold font-mono text-gray-900 mb-6">{fmtPrice(listing.price)} NEX</p>
+          <p className="text-3xl font-bold font-mono text-gray-900 mb-5">{fmtPrice(listing.price)} NEX</p>
           {!isOwner && (
             <div className="flex gap-3">
               <button onClick={() => onBuy(listing)} disabled={isBuying}
@@ -435,6 +480,8 @@ export default function MarketplaceClient() {
 
         let imageUrl = `/api/image/${tokenId}`;
         let nftName = `Nexus #${tokenId}`;
+        let nftDesc = "";
+        let nftAttrs: { trait_type: string; value: string | number }[] = [];
 
         try {
           const tokenUri = await publicClient.readContract({
@@ -444,24 +491,25 @@ export default function MarketplaceClient() {
             args: [tokenId],
           }) as string;
 
+          console.log(`[marketplace] token ${tokenId} URI:`, tokenUri?.slice(0, 80));
+
           if (tokenUri) {
-            if (isBayc && tokenUri.startsWith("data:application/json;base64,")) {
-              const meta = await fetchMetadata(tokenUri);
-              if (meta) {
-                if (meta.image) imageUrl = resolveIpfs(meta.image);
-                if (meta.name) nftName = meta.name;
-              }
-            } else {
-              const meta = await fetchMetadata(resolveIpfs(tokenUri));
-              if (meta) {
-                if (meta.image) imageUrl = resolveIpfs(meta.image);
-                if (meta.name) nftName = meta.name;
+            // resolveMetaUri handles BOTH data:application/json;base64, AND ipfs:// AND https://
+            const meta = await resolveMetaUri(tokenUri);
+            if (meta) {
+              if (meta.name) nftName = meta.name;
+              if (meta.description) nftDesc = meta.description;
+              if (meta.attributes) nftAttrs = meta.attributes;
+              if (meta.image) {
+                // BAYC often uses data:image/svg+xml;base64, — pass through directly
+                imageUrl = resolveIpfs(meta.image);
+                console.log(`[marketplace] token ${tokenId} image:`, imageUrl.slice(0, 80));
               }
             }
           }
         } catch (e) { console.error("Metadata error:", e); }
 
-        active.push({ seller, nftAddress, tokenId, price, image: imageUrl, name: nftName });
+        active.push({ seller, nftAddress, tokenId, price, image: imageUrl, name: nftName, description: nftDesc, attributes: nftAttrs });
       }
       setListings(active);
     } catch (err) {

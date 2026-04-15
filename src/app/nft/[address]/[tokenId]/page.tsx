@@ -4,7 +4,7 @@ import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useAccount, usePublicClient, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { getAddress, parseEther } from "viem";
-import { ERC721_ABI, MARKETPLACE_ADDRESS, MARKETPLACE_ABI } from "@/lib/marketplace";
+import { ERC721_ABI, MARKETPLACE_ADDRESS, MARKETPLACE_ABI, NFT_ADDRESS_BAYC as NFT_ADDRESS } from "@/lib/marketplace";
 import { useToast } from "@/app/components/Toast";
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;

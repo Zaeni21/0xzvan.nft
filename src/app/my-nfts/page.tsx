@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAccount, useConnect, usePublicClient, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
-import { NFT_ADDRESS, ERC721_ABI } from "@/lib/marketplace";
+import { NFT_ADDRESS_BAYC, NFT_ADDRESS_OLD, ALL_NFT_ADDRESSES, ERC721_ABI } from "@/lib/marketplace";
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 
@@ -38,8 +38,6 @@ export default function MyNFTsPage() {
       setLoading(true);
       setError(null);
       try {
-        // Get all Transfer events: received & sent
-        const base = { address: NFT_ADDRESS as `0x${string}` };
         const TRANSFER_EVENT = {
           type: "event" as const,
           name: "Transfer",
@@ -50,51 +48,59 @@ export default function MyNFTsPage() {
           ],
         };
 
-        const [received, sent] = await Promise.all([
-          publicClient.getLogs({ ...base, event: TRANSFER_EVENT, args: { to: address }, fromBlock: 0n, toBlock: "latest" }).catch(() => []),
-          publicClient.getLogs({ ...base, event: TRANSFER_EVENT, args: { from: address }, fromBlock: 0n, toBlock: "latest" }).catch(() => []),
-        ]);
+        // Query Transfer events dari SEMUA koleksi NFT
+        const allOwned: OwnedNFT[] = [];
 
-        // Owned = received tokenIds minus sent
-        const sentIds = new Set(sent.map((l: any) => l.args.tokenId.toString()));
-        const ownedIds = [...new Set(
-          received
-            .map((l: any) => l.args.tokenId as bigint)
-            .filter((id: bigint) => !sentIds.has(id.toString()))
-        )];
+        for (const contractAddr of ALL_NFT_ADDRESSES) {
+          const base = { address: contractAddr as `0x${string}` };
+          const [received, sent] = await Promise.all([
+            publicClient.getLogs({ ...base, event: TRANSFER_EVENT, args: { to: address }, fromBlock: 0n, toBlock: "latest" }).catch(() => []),
+            publicClient.getLogs({ ...base, event: TRANSFER_EVENT, args: { from: address }, fromBlock: 0n, toBlock: "latest" }).catch(() => []),
+          ]);
 
-        // Fetch metadata for each
-        const result: OwnedNFT[] = [];
-        for (const tokenId of ownedIds) {
-          try {
-            const tokenUri = await publicClient.readContract({
-              address: NFT_ADDRESS as `0x${string}`,
-              abi: ERC721_ABI,
-              functionName: "tokenURI",
-              args: [tokenId],
-            }) as string;
+          const sentIds = new Set(sent.map((l: any) => l.args.tokenId.toString()));
+          const ownedIds = [...new Set(
+            received
+              .map((l: any) => l.args.tokenId as bigint)
+              .filter((id: bigint) => !sentIds.has(id.toString()))
+          )];
 
-            let name = `Nexus #${tokenId}`;
-            let image = `/api/image/${tokenId}`;
-            let description = "";
+          for (const tokenId of ownedIds) {
+            try {
+              const tokenUri = await publicClient.readContract({
+                address: contractAddr as `0x${string}`,
+                abi: ERC721_ABI,
+                functionName: "tokenURI",
+                args: [tokenId],
+              }) as string;
 
-            if (tokenUri) {
-              const res = await fetch(resolveIpfs(tokenUri)).catch(() => null);
-              const meta = res?.ok ? await res.json().catch(() => null) : null;
-              if (meta) {
-                name = meta.name || name;
-                description = meta.description || "";
-                if (meta.image) image = resolveIpfs(meta.image);
+              let name = `Nexus #${tokenId}`;
+              let image = `/api/image/${tokenId}`;
+              let description = "";
+
+              if (tokenUri) {
+                let meta = null;
+                if (tokenUri.startsWith("data:application/json;base64,")) {
+                  meta = JSON.parse(atob(tokenUri.split(",")[1]));
+                } else {
+                  const res = await fetch(resolveIpfs(tokenUri)).catch(() => null);
+                  meta = res?.ok ? await res.json().catch(() => null) : null;
+                }
+                if (meta) {
+                  name = meta.name || name;
+                  description = meta.description || "";
+                  if (meta.image) image = resolveIpfs(meta.image);
+                }
               }
-            }
 
-            result.push({ tokenId, tokenUri, name, image, description });
-          } catch {
-            result.push({ tokenId, tokenUri: "", name: `Nexus #${tokenId}`, image: `/api/image/${tokenId}` });
+              allOwned.push({ tokenId, tokenUri, name, image, description });
+            } catch {
+              allOwned.push({ tokenId, tokenUri: "", name: `Nexus #${tokenId}`, image: `/api/image/${tokenId}` });
+            }
           }
         }
 
-        setNfts(result.reverse());
+        setNfts(allOwned.reverse());
       } catch (err: any) {
         setError(err.message || "Failed to load NFTs");
       } finally {

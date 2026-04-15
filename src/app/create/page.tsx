@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { uploadToPinata } from "@/app/actions/uploadToPinata";
-import { NFT_ADDRESS, ERC721_ABI } from "@/lib/marketplace";
+import { NFT_ADDRESS_BAYC as NFT_ADDRESS, ERC721_ABI } from "@/lib/marketplace";
 import { useToast } from "@/app/components/Toast";
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;

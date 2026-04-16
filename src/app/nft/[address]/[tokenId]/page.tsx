@@ -34,21 +34,14 @@ const resolveMetaUri = async (tokenUri: string): Promise<any> => {
 // Render NFT image — handle data:image/svg+xml;base64, inline agar tidak kena CSP block
 function NFTImage({ src, fallback, alt, className }: { src: string; fallback: string; alt: string; className?: string }) {
   const [errored, setErrored] = useState(false);
-  if (src.startsWith("data:image/svg+xml;base64,")) {
-    try {
-      const svg = atob(src.split(",")[1]);
-      return <div className={className} dangerouslySetInnerHTML={{ __html: svg }}
-        style={{ display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }} />;
-    } catch {}
-  }
-  if (src.startsWith("data:image/svg+xml,")) {
-    try {
-      const svg = decodeURIComponent(src.split(",")[1]);
-      return <div className={className} dangerouslySetInnerHTML={{ __html: svg }}
-        style={{ display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }} />;
-    } catch {}
-  }
-  return <img src={errored ? fallback : (src || fallback)} alt={alt} className={className} onError={() => setErrored(true)} />;
+  return (
+    <img
+      src={errored || !src ? fallback : src}
+      alt={alt}
+      className={className}
+      onError={() => { if (!errored) setErrored(true); }}
+    />
+  );
 }
 
 // Minimal ABI untuk read-only: tokenURI + ownerOf
@@ -64,6 +57,7 @@ export default function NFTDetailPage({ params: p }: { params: Promise<{ address
   const { success, error: toastError, loading: toastLoading, dismiss } = useToast();
 
   const [meta, setMeta] = useState<any>(null);
+  const [attrs, setAttrs] = useState<{trait_type:string;value:string|number}[]>([]);
   const [image, setImage] = useState(`/api/image/${tokenId}`);
   const [owner, setOwner] = useState<string | null>(null);
   const [listing, setListing] = useState<{ price: bigint; seller: string } | null>(null);
@@ -93,6 +87,7 @@ export default function NFTDetailPage({ params: p }: { params: Promise<{ address
           if (data) {
             setMeta(data);
             if (data.image) setImage(resolveIpfs(data.image));
+            if (data.attributes) setAttrs(data.attributes);
           }
         }
       } catch (e) { console.error(e); }
@@ -195,6 +190,21 @@ export default function NFTDetailPage({ params: p }: { params: Promise<{ address
                 </div>
               ))}
             </div>
+
+            {/* Attributes */}
+            {attrs.length > 0 && (
+              <div>
+                <p className="text-[10px] font-mono text-gray-400 uppercase tracking-widest mb-3">Attributes</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {attrs.map((a, i) => (
+                    <div key={i} className="bg-blue-50 border border-blue-100 rounded-2xl px-3 py-2.5 text-center">
+                      <p className="text-[9px] font-mono text-blue-400 uppercase tracking-wider truncate">{a.trait_type}</p>
+                      <p className="text-xs font-semibold text-blue-900 mt-0.5 truncate">{String(a.value)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Actions */}
             {isOwner && (

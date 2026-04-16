@@ -108,39 +108,16 @@ function WalletButton() {
 // Handle data:image/svg+xml;base64, via dangerouslySetInnerHTML jika <img> gagal
 function NFTImage({ src, fallback, alt, className }: { src: string; fallback: string; alt: string; className?: string }) {
   const [errored, setErrored] = useState(false);
-
-  // Kalau data:image/svg+xml — decode dan render inline SVG langsung
-  // ini bypass CSP restriction pada beberapa browser
-  if (src.startsWith("data:image/svg+xml;base64,")) {
-    try {
-      const svgContent = atob(src.split(",")[1]);
-      return (
-        <div className={className}
-          dangerouslySetInnerHTML={{ __html: svgContent }}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-        />
-      );
-    } catch { /* fallthrough */ }
-  }
-
-  if (src.startsWith("data:image/svg+xml,")) {
-    try {
-      const svgContent = decodeURIComponent(src.split(",")[1]);
-      return (
-        <div className={className}
-          dangerouslySetInnerHTML={{ __html: svgContent }}
-          style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
-        />
-      );
-    } catch { /* fallthrough */ }
-  }
-
+  // Pakai <img> langsung untuk semua format termasuk data: URIs
+  // CSP header di next.config.js sudah allow img-src data:
   return (
     <img
-      src={errored ? fallback : (src || fallback)}
+      src={errored || !src ? fallback : src}
       alt={alt}
       className={className}
-      onError={() => setErrored(true)}
+      onError={() => {
+        if (!errored) setErrored(true);
+      }}
     />
   );
 }

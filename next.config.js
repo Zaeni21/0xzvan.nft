@@ -1,12 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
+
+  // Allow SVG images + data: URIs via Next.js
+  images: {
+    dangerouslyAllowSVG: true,
+    contentDispositionType: "attachment",
+    remotePatterns: [{ protocol: "https", hostname: "**" }],
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  // Fix: allow data: URIs for img tags (BAYC NFT uses data:image/svg+xml;base64,)
+
+  // Fix: allow data: URIs for <img> tags (BAYC uses data:image/svg+xml;base64,)
   async headers() {
     return [
       {
@@ -18,7 +22,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https:",
+              "img-src * data: blob:",
               "font-src 'self' data:",
               "connect-src 'self' https: wss:",
               "frame-src 'none'",
@@ -28,15 +32,13 @@ const nextConfig = {
       },
     ];
   },
-  // Fix: wagmi/viem import 'ws' (Node.js) di client bundle → alias ke false
+
+  // Fix: wagmi/viem Node.js modules in browser bundle
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
-        ws: false,
-        net: false,
-        tls: false,
-        fs: false,
+        ws: false, net: false, tls: false, fs: false,
       };
     }
     return config;

@@ -19,3 +19,148 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ============================================
+   NEXUS OS THEME (from server-source merge)
+   ============================================ */
+:root {
+  --nexus-primary: #0095FF;
+  --nexus-accent: #38b6ff;
+  --nexus-card-bg: #0a0a0a;
+  --nexus-border: #1a1a1a;
+  --nexus-text-secondary: #6b7280;
+  --nexus-glow: rgba(0, 149, 255, 0.4);
+  --nexus-glow-sm: rgba(0, 149, 255, 0.15);
+}
+
+.nexus-bg {
+  background-color: #000000;
+  background-image: radial-gradient(circle, #0d1a2e 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.nexus-glow { box-shadow: 0 0 20px rgba(0, 149, 255, 0.3), 0 0 40px rgba(0, 149, 255, 0.1); }
+.nexus-glow-sm { box-shadow: 0 0 8px rgba(0, 149, 255, 0.2); }
+.nexus-text-glow { text-shadow: 0 0 12px rgba(0, 149, 255, 0.6); }
+
+.nexus-card {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 6px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.nexus-card:hover { border-color: #2a2a2a; }
+.nexus-card-interactive:hover {
+  border-color: rgba(0, 149, 255, 0.3);
+  box-shadow: 0 0 12px rgba(0, 149, 255, 0.08);
+}
+
+.nexus-btn-primary {
+  background: transparent;
+  border: 1px solid #0095FF;
+  color: #38b6ff;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+.nexus-btn-primary:hover {
+  box-shadow: 0 0 16px rgba(0, 149, 255, 0.4);
+  border-color: #38b6ff;
+  color: #93c5fd;
+}
+
+.nexus-btn-solid {
+  background: #2563eb;
+  border: 1px solid #0095FF;
+  color: #fff;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+.nexus-btn-solid:hover { background: #0095FF; box-shadow: 0 0 20px rgba(0, 149, 255, 0.5); }
+.nexus-btn-solid:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.nexus-badge {
+  background: rgba(0, 149, 255, 0.08);
+  border: 1px solid rgba(0, 149, 255, 0.2);
+  color: #38b6ff;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+}
+.nexus-badge-green { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.2); color: #4ade80; }
+.nexus-badge-red   { background: rgba(239,68,68,0.08);  border-color: rgba(239,68,68,0.2);  color: #f87171; }
+
+.nexus-status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #0095FF;
+  box-shadow: 0 0 6px rgba(0, 149, 255, 0.8);
+  animation: nexus-pulse 2s ease-in-out infinite;
+}
+@keyframes nexus-pulse {
+  0%,100% { opacity:1; box-shadow: 0 0 6px rgba(0,149,255,0.8); }
+  50%      { opacity:0.6; box-shadow: 0 0 12px rgba(0,149,255,0.4); }
+}
+
+.nexus-input {
+  background: #050505;
+  border: 1px solid #1f1f1f;
+  color: #fff;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8rem;
+  border-radius: 4px;
+  padding: 0.6rem 0.8rem;
+  transition: border-color 0.15s ease;
+  width: 100%;
+}
+.nexus-input:focus { outline: none; border-color: #0095FF; box-shadow: 0 0 0 1px rgba(0,149,255,0.2); }
+.nexus-input::placeholder { color: #374151; }
+
+.nexus-divider { height: 1px; background: linear-gradient(90deg, transparent, #1f2937 20%, #1f2937 80%, transparent); }
+
+@keyframes glow-pulse {
+  0%,100% { box-shadow: 0 0 8px rgba(0,149,255,0.3); }
+  50%      { box-shadow: 0 0 20px rgba(0,149,255,0.6); }
+}
+.animate-glow-pulse { animation: glow-pulse 2s ease-in-out infinite; }
+.animate-shimmer {
+  background: linear-gradient(90deg, #0a0a0a 25%, #111827 50%, #0a0a0a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+
+/* Sketch components */
+.sketch-text { font-family: var(--font-sketch, cursive); }
+.sketch-card { background: white; border: 2px solid black; border-radius: 2px; }
+.sketch-button {
+  font-family: var(--font-sketch, cursive);
+  border: 2px solid black;
+  background: white;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.sketch-button:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 black; }
+.sketch-button:active { transform: translate(1px, 1px); box-shadow: none; }
+.sketch-border { border: 2px solid black; }
+.sketch-border-heavy { border: 3px solid black; }
+.sketch-highlight { background: linear-gradient(120deg, #fff176 0%, #fff176 100%); padding: 0 2px; }
+.sketch-underline { border-bottom: 2px solid black; display: inline-block; }
+.sketch-paper { background: #fafaf7; }

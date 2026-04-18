@@ -3,14 +3,24 @@ const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
 
-  // Allow SVG images + data: URIs via Next.js
+  // Farcaster MiniApp: expose app URL to client
+  env: {
+    NEXT_PUBLIC_APP_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.NEXT_PUBLIC_APP_URL || "https://0xzvan-nft.vercel.app",
+  },
+
+  // Allow dev origins for Farcaster debugging
+  allowedDevOrigins: ["*.ngrok.app", "*.neynar.com", "*.neynar.app"],
+
+  // SVG + all remote image hosts
   images: {
     dangerouslyAllowSVG: true,
     contentDispositionType: "attachment",
     remotePatterns: [{ protocol: "https", hostname: "**" }],
   },
 
-  // Fix: allow data: URIs for <img> tags (BAYC uses data:image/svg+xml;base64,)
+  // CSP: allow data: URIs for BAYC SVG images
   async headers() {
     return [
       {

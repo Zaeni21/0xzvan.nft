@@ -10,6 +10,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <meta name="base:app_id" content="69ef7cb87bbc513a443f26fe" />
+      </head>
       <body className="antialiased bg-black text-white font-sans">
         <Providers>{children}</Providers>
       </body>

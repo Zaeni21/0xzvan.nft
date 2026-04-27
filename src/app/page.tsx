@@ -1,10 +1,15 @@
 "use client";
 
+import Head from "next/head";
 import Link from "next/link";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white text-gray-900 font-sans">
+    <>
+      <Head>
+        <meta name="base:app_id" content="699d9d9812d4a113d9719f69" />
+      </Head>
+      <div className="min-h-screen bg-white text-gray-900 font-sans">
       {/* NAVBAR */}
       <nav className="flex items-center justify-between px-6 h-16 border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur-md z-50">
         <div className="flex items-center gap-8">
@@ -53,6 +58,7 @@ export default function LandingPage() {
           </div>
         </section>
       </main>
-    </div>
+      </div>
+    </>
   );
 }

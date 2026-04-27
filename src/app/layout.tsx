@@ -5,11 +5,18 @@ import { Providers } from "./providers"; // Kita akan buat file ini
 export const metadata: Metadata = {
   title: "0xzvan.nft | Nexus Marketplace",
   description: "NFT Marketplace on Nexus Testnet",
+  other: {
+    "base:app_id": "69ef7cb87bbc513a443f26fe",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <meta name="base:app_id" content="69ef7cb87bbc513a443f26fe" />
+        <meta property="base:app_id" content="69ef7cb87bbc513a443f26fe" />
+      </head>
       <body className="antialiased bg-black text-white font-sans">
         <Providers>{children}</Providers>
       </body>

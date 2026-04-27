@@ -1,0 +1,17 @@
+{
+  "accountAssociation": null,
+  "frame": {
+    "version": "1",
+    "name": "0xzvan.nft",
+    "iconUrl": "https://0xzvan-nft.vercel.app/icon.png",
+    "splashImageUrl": "https://0xzvan-nft.vercel.app/splash.png",
+    "splashBackgroundColor": "#000000",
+    "homeUrl": "https://0xzvan-nft.vercel.app",
+    "webhookUrl": "",
+    "subtitle": "NFT Marketplace on Nexus Testnet",
+    "description": "Mint and trade NFTs on Nexus Testnet",
+    "screenshotUrls": [],
+    "primaryCategory": "art-creativity",
+    "tags": ["nft", "marketplace", "nexus"]
+  }
+}

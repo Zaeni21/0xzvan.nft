@@ -19,7 +19,7 @@ export default function LandingPage() {
         </div>
 
         <div className="flex items-center gap-4">
-          <Link 
+          <Link
             href="/marketplace"
             className="bg-black text-white px-6 py-2.5 rounded-full text-xs font-mono font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all"
           >
@@ -36,21 +36,21 @@ export default function LandingPage() {
             <br className="hidden md:block" />
             <span className="text-[#2081e2] block md:inline">EXTRAORDINARY</span> NFTs
           </h1>
-          
+
           <p className="text-sm md:text-base font-light text-gray-600 max-w-2xl mx-auto leading-relaxed mb-12">
-            The first community-driven NFT marketplace on Nexus Network. 
+            The first community-driven NFT marketplace on Nexus Network.
             Deploy, mint, and trade with zero friction.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
-            <Link 
-              href="/marketplace" 
+            <Link
+              href="/marketplace"
               className="w-full sm:w-auto bg-[#2081e2] hover:bg-blue-600 text-white px-10 py-4 rounded-full text-sm font-mono font-bold uppercase tracking-widest transition-all shadow-lg"
             >
               EXPLORE MARKETPLACE
             </Link>
-            <Link 
-              href="/create" 
+            <Link
+              href="/create"
               className="w-full sm:w-auto bg-black hover:bg-zinc-800 text-white px-10 py-4 rounded-full text-sm font-mono font-bold uppercase tracking-widest transition-all shadow-lg"
             >
               CREATE NFT

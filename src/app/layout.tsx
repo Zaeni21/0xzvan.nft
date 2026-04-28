@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "0xzvan.nft | Nexus Marketplace",
   description: "NFT Marketplace on Nexus Testnet",
   metadataBase: new URL("https://0xzvan-nft.vercel.app"),
+  other: {
+    "base:app_id": "69ef7cb87bbc513a443f26fe",
+  },
 };
 
 export default function RootLayout({
@@ -15,9 +18,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <meta name="base:app_id" content="69ef7cb87bbc513a443f26fe" />
-      </head>
       <body className="antialiased bg-black text-white font-sans">
         <Providers>{children}</Providers>
       </body>

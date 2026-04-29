@@ -1,29 +1,14 @@
-"use client";
+'use client'
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
-import { WagmiProvider, createConfig, http } from "wagmi";
-import { injected } from "wagmi/connectors";
-import { ToastProvider } from "@/app/components/Toast";
-
-const nexusTestnet = {
-  id: 3945,
-  name: "Nexus Testnet",
-  nativeCurrency: { name: "Nexus", symbol: "NEX", decimals: 18 },
-  rpcUrls: { default: { http: ["https://testnet.rpc.nexus.xyz"] } },
-  blockExplorers: { default: { name: "NexusScan", url: "https://testnet.explorer.nexus.xyz" } },
-} as const;
-
-const config = createConfig({
-  chains: [nexusTestnet],
-  connectors: [
-    injected(), // MetaMask / injected wallet
-  ],
-  transports: { [nexusTestnet.id]: http() },
-});
+import { WagmiProvider } from 'wagmi'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { type ReactNode, useState } from 'react'
+import { config } from '@/config/wagmi'
+import { ToastProvider } from '@/app/components/Toast'
 
 export function Providers({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(() => new QueryClient())
+
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
@@ -32,5 +17,5 @@ export function Providers({ children }: { children: ReactNode }) {
         </ToastProvider>
       </QueryClientProvider>
     </WagmiProvider>
-  );
+  )
 }
